@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # create folder, run experiment
-# Usage: ./runExp.sh appname uopCacheUopCapacity [folderSuffix] [scarabCmdOptions] [instLimit] [scarabPath] [destDir]
+# Usage: ./runExp.sh appname uopCacheSize [folderSuffix] [scarabCmdOptions] [instLimit] [scarabPath] [destDir]
 # supported apps are in traces dictionary below
 # if folder with the experiment name already exists then skip
 
 app=$1
-uopCacheUopCapacity=$2  # Number of uops
+uopCacheSize=$2  # Number of entries/lines. Default is usually 4 uops per entry/line.
 folderSuffix=$3
 scarabCmdOptions=$4
 instLimit=$5
@@ -68,7 +68,7 @@ declare -A pttraces=(["cassandra"]="/mnt/sdc/gdrive_peter/traces/cassandra/trace
     ["python"]="/mnt/sdc/gdrive_peter/traces/four-new-traces/python.gz")
 
 trace=${memtraces[$app]}
-common_scarab_params="--bp_mech=tagescl --perfect_crs=1 --fetch_off_path_ops=1 --inst_limit $instLimit --uop_cache_uop_capacity=$uopCacheUopCapacity $scarabCmdOptions --perfect_nt_btb=0  --btb_entries=4096"
+common_scarab_params="--fetch_off_path_ops=0 --inst_limit $instLimit --uop_cache_size=$uopCacheSize $scarabCmdOptions --memory_interleave_factor=4096"
 if [ -z $trace ]; then  # maybe PT trace
     trace=${pttraces[$app]}
     if [ -z $trace ]; then
@@ -78,10 +78,10 @@ if [ -z $trace ]; then  # maybe PT trace
     output_cmd="$scarabPath --frontend=pt --cbp_trace_r0=$trace $common_scarab_params"
 else  # memtrace
     modules=`echo $trace | sed "s/^\(.*\)\/trace\/.*trace.*/\1\/raw\//"`
-    output_cmd="$scarabPath --frontend=memtrace --cbp_trace_r0=$trace --memtrace_modules_log=$modules $common_scarab_params"
+    output_cmd="$scarabPath --frontend=memtrace --cbp_trace_r0=$trace --memtrace_modules_log=$modules $common_scarab_params --memory_interleave_factor=4096"
 fi
 
-destFolder=$destDir/${app}_`expr $instLimit / 1000000`M_UC${uopCacheUopCapacity}${folderSuffix}
+destFolder=$destDir/${app}_`expr $instLimit / 1000000`M_UC${uopCacheSize}${folderSuffix}
 if [ -d $destFolder ]; then
     echo "$destFolder already exists. Skipping"
     exit
