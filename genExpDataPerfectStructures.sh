@@ -17,39 +17,47 @@ perfect_bp_btb_ibp_crs="--fdip_enable=0 --uop_cache_additional_issue_bandwidth=0
 perfect_bp_btb_ibp_crs_ucq1="--fdip_enable=0 --uop_cache_additional_issue_bandwidth=0 --uop_queue_length=1 --perfect_btb=1 --perfect_ibp=1 --perfect_crs=1 --perfect_bp=1"
 
 gap_apps="bc bfs pr sssp tc"
-pt_apps="cassandra kafka drupal finagle-chirper finagle-http mediawiki tomcat wordpress verilator_pt clang_new mysql_new python" #redis postgres mysql
+pt_apps="cassandra kafka drupal finagle-chirper finagle-http mediawiki tomcat wordpress verilator_pt clang_new mysql_new python postgres" #redis  mysql
 older_ok_apps="gcc clang perlbench deepsjeng xgboost"
-advancement_apps="$pt_apps postgres gcc perlbench deepsjeng"
+advancement_apps="$pt_apps gcc perlbench deepsjeng"
 apps="$pt_apps $older_ok_apps"
 
 for app in $advancement_apps
 do
-    for uoc_size in 0 768 1536 3072 6144 12228 24576 49152 98304 196608 393216 786432 #128 256 512 1024 2048 4096 8192 16384 32768 65536 131072
+    for uoc_size in 0 768 1536 3072 6144 12228 24576 49152 98304 196608 393216 786432   #128 256 512 1024 2048 4096 8192 16384 32768 65536 131072
     do
-        # ~/scarab_out/runExp.sh $app $uoc_size "" "$baseline_flags" &
-
         # Switching plot, showing inverse correlation between switches and IPC.
         ~/scarab_out/runExp.sh $app $uoc_size _BASE_PERF_BP_BTB_IBP_CRS_IC_UCQ1_IGNORE_BF "$perfect_ucq1 --ignore_bar_fetch=1" &
         ~/scarab_out/runExp.sh $app $uoc_size _BASE_PERF_BP_BTB_IBP_CRS_IC_IGNORE_BF "$perfect_except_dcache --ignore_bar_fetch=1" &
         
         wait_cpu_low $wait_cpu_percent
     done
-    continue
+    
+    # Perfect/Inf size UOC vs baseline of 1536 to show performance potential
+    for uoc_size in 0 1536 3072 6144 12228
+    do
+        ~/scarab_out/runExp.sh $app $uoc_size "" "$baseline_fdip_on" &
+    done
+    ~/scarab_out/runExp.sh $app 0 _ORACLE_PERFECT "$baseline_fdip_on --oracle_perfect_uop_cache=1" &
+    ~/scarab_out/runExp.sh $app 0 _INF_SIZE "$baseline_fdip_on --inf_size_uop_cache=1" &
 
-    # sleep 1
-    # wait_cpu_low $wait_cpu_percent
+    sleep 1
+    wait_cpu_low $wait_cpu_percent
     
     # ~/scarab_out/runExp.sh $app 0 _BASE_PERF_BP_BTB_IBP_CRS_IC_ORACLE_PERFECT "$perfect_except_dcache --oracle_perfect_uop_cache=1" &
     # ~/scarab_out/runExp.sh $app 0 _BASE_PERF_BP_BTB_IBP_CRS_IC_ORACLE_PERFECT_UCQ8 "$perfect_except_dcache_ucq8 --oracle_perfect_uop_cache=1" &
     # ~/scarab_out/runExp.sh $app 0 _BASE_PERF_BP_BTB_IBP_CRS_IC_ORACLE_PERFECT_UCQ10 "$perfect_except_dcache_ucq10 --oracle_perfect_uop_cache=1" &
     # ~/scarab_out/runExp.sh $app 0 _BASE_PERF_BP_BTB_IBP_CRS_IC_UCQ1_ORACLE_PERFECT "$perfect_ucq1 --oracle_perfect_uop_cache=1" &
-    # ~/scarab_out/runExp.sh $app 0 _ORACLE_PERFECT "$baseline_flags --oracle_perfect_uop_cache=1" &
     # ~/scarab_out/runExp.sh $app 0 _FDIP_ORACLE_PERFECT "$baseline_fdip_on --oracle_perfect_uop_cache=1" &
     # ~/scarab_out/runExp.sh $app 0 _PERF_BP_BTB_IBP_CRS_ORACLE_PERFECT "$perfect_bp_btb_ibp_crs --oracle_perfect_uop_cache=1" &
     # ~/scarab_out/runExp.sh $app 0 _PERF_BP_BTB_IBP_CRS_UCQ1_ORACLE_PERFECT "$perfect_bp_btb_ibp_crs_ucq1 --oracle_perfect_uop_cache=1" &
 
     # sleep 1
     # wait_cpu_low $wait_cpu_percent
+    continue
+
+
+
 
     ###########################################################################################
     # Dual Path Prefetching. ZL - zero latency uoc prefetch
