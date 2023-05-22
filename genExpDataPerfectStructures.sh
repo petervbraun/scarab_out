@@ -22,26 +22,68 @@ older_ok_apps="gcc clang perlbench deepsjeng xgboost"
 advancement_apps="$pt_apps gcc perlbench deepsjeng"
 apps="$pt_apps $older_ok_apps"
 
+
+# ~/scarab_out/runExp.sh deepsjeng 1536 "_UCQ8" "--uop_queue_length=8" &
+# ~/scarab_out/runExp.sh deepsjeng 1536 "_UCQ8_NO_REPL_AFTER_QUEUE_SIZE8" "--uop_queue_length=8 --no_repl_after_queue_size=8" &
+# ~/scarab_out/runExp.sh deepsjeng 1536 "_UCQ8_NO_REPL_AFTER_QUEUE_SIZE8" "--uop_queue_length=8 --no_repl_after_queue_size=2" &
+
+# ~/scarab_out/runExp.sh deepsjeng 1536 "" "" 10000000 &
+# for min_block in 2 4 6 8 10
+# do
+    # ~/scarab_out/runExp.sh deepsjeng 1536 "_REPL_LARGE_BLOCKS$min_block" "--uop_cache_insert_block_gt=$min_block" 10000000 &
+    # grep IPC ~/scarab_out/deepsjeng_10M_UC1536_REPL_LARGE_BLOCKS$min_block/memory.stat.0.out
+# done
+# exit
+
+# heiners_uopc3
+for cycle_resteer_ratio_exp in 1 2 3 4 5 6 7 8 9 10 11 12
+do
+    cycle_resteer_ratio=10**$cycle_resteer_ratio_exp
+    ~/scarab_out/runExp.sh deepsjeng 1536 "_heiners_uopc3_$cycle_resteer_ratio" "--uop_min_resteer_count=$cycle_resteer_ratio --uop_queue_min_size=0" &
+done
+exit
+# then lets see if 90M did any better. 90M did not do better. suspiciously it did the same as 10M
+
+# --uop_cache_insert_only_high_lookups_after_resteer=1
+~/scarab_out/runExp.sh deepsjeng 1536 "" "" 90000000 &
+for lookup_cnt in 1 10 100 1000
+do
+    ~/scarab_out/runExp.sh deepsjeng 1536 "_INS_HIGH_LOOKUP_RESTEER$lookup_cnt" "--uop_cache_insert_only_high_lookups_after_resteer=$lookup_cnt" 90000000 &
+done
+exit
+
 for app in $advancement_apps
 do
-    for uoc_size in 0 768 1536 3072 6144 12228 24576 49152 98304 196608 393216 786432   #128 256 512 1024 2048 4096 8192 16384 32768 65536 131072
-    do
-        # Switching plot, showing inverse correlation between switches and IPC.
-        ~/scarab_out/runExp.sh $app $uoc_size _BASE_PERF_BP_BTB_IBP_CRS_IC_UCQ1_IGNORE_BF "$perfect_ucq1 --ignore_bar_fetch=1" &
-        ~/scarab_out/runExp.sh $app $uoc_size _BASE_PERF_BP_BTB_IBP_CRS_IC_IGNORE_BF "$perfect_except_dcache --ignore_bar_fetch=1" &
+    # Sweep that only inserts uopc on the onpath.
+    ~/scarab_out/runExp.sh $app 1536 "_UOC_INS_ONPATH" "--uop_cache_insert_only_onpath=1" &
+    # Attempt at policy to reduce resteers
+    # for min_block in 1 2 3 4 5 6 7 10
+    #     do
+    #         ~/scarab_out/runExp.sh $app 1536 "_REPL_LARGE_BLOCKS" "--uop_cache_insert_block_gt=$min_block" &
+    # done
+
+    # for uoc_size in 0 768 1536 3072 6144 12228 24576 49152 98304 196608 393216 786432   #128 256 512 1024 2048 4096 8192 16384 32768 65536 131072
+    # do
+    #     # Switching plot, showing inverse correlation between switches and IPC.
+    #     ~/scarab_out/runExp.sh $app $uoc_size _BASE_PERF_BP_BTB_IBP_CRS_IC_UCQ1_IGNORE_BF "$perfect_ucq1 --ignore_bar_fetch=1" &
+    #     ~/scarab_out/runExp.sh $app $uoc_size _BASE_PERF_BP_BTB_IBP_CRS_IC_IGNORE_BF "$perfect_except_dcache --ignore_bar_fetch=1" &
         
-        wait_cpu_low $wait_cpu_percent
-    done
+    #     wait_cpu_low $wait_cpu_percent
+    # done
     
     # Perfect/Inf size UOC vs baseline of 1536 to show performance potential
-    for uoc_size in 0 1536 3072 6144 12228
+    for uoc_size in 0 768 1536 3072 6144 12228 24576
     do
         ~/scarab_out/runExp.sh $app $uoc_size "" "$baseline_fdip_on" &
     done
-    ~/scarab_out/runExp.sh $app 0 _ORACLE_PERFECT "$baseline_fdip_on --oracle_perfect_uop_cache=1" &
-    ~/scarab_out/runExp.sh $app 0 _INF_SIZE "$baseline_fdip_on --inf_size_uop_cache=1" &
 
-    sleep 1
+    # For default size, what is perf potential for SERVING from uoc?
+    # Probably just multiply resteer count by 7, so no new experiment necessary, just new plot.
+    uoc_size=1536
+    ~/scarab_out/runExp.sh $app $uoc_size "_PERF_IC_UCQ1" "--perfect_icache=1 --uop_queue_length=1" &
+    ~/scarab_out/runExp.sh $app 0 _ORACLE_PERFECT "$baseline_fdip_on --oracle_perfect_uop_cache=1" &
+    # ~/scarab_out/runExp.sh $app 0 _INF_SIZE "$baseline_fdip_on --inf_size_uop_cache=1" &
+
     wait_cpu_low $wait_cpu_percent
     
     # ~/scarab_out/runExp.sh $app 0 _BASE_PERF_BP_BTB_IBP_CRS_IC_ORACLE_PERFECT "$perfect_except_dcache --oracle_perfect_uop_cache=1" &

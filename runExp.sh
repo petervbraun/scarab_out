@@ -68,7 +68,8 @@ declare -A pttraces=(["cassandra"]="/mnt/sdc/gdrive_peter/traces/cassandra/trace
     ["python"]="/mnt/sdc/gdrive_peter/traces/four-new-traces/python.gz")
 
 trace=${memtraces[$app]}
-common_scarab_params="--bp_mech=tagescl --perfect_crs=1 --fetch_off_path_ops=1 --perfect_nt_btb=0  --btb_entries=4096 --inst_limit $instLimit --uop_cache_uop_capacity=$uopCacheUopCapacity $scarabCmdOptions "
+# --btb_entries=4096 - BTB should be size specified in PARAMS.in (8K for sunny cove)
+common_scarab_params="--bp_mech=mtage --mtage_realistic_sc_40k=1 --perfect_crs=1 --fetch_off_path_ops=1 --perfect_nt_btb=0  --inst_limit $instLimit --uop_cache_uop_capacity=$uopCacheUopCapacity $scarabCmdOptions "
 if [ -z $trace ]; then  # maybe PT trace
     trace=${pttraces[$app]}
     if [ -z $trace ]; then
